@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>Mapbox</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.39.1/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.39.1/mapbox-gl.css' rel='stylesheet' />
+    <script type="text/javascript" src="jsmpeg.min.js"></script>
+	<!-- Latest compiled and minified CSS -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+	<style>
+        body { margin:0; padding:0; }
+       
+		#map {
+			position:absolute;
+			top:0;
+			left:200pt;
+			bottom:0;
+			width:80%;
+			height:100%;
+			z-index: 0
+		}
+		
+		#section1-container {
+			background-color:black;
+			background: rgba(0, 0, 0, 0.75);
+			color: #fff;
+			position:relative;
+			z-index: 1
+		}
+
+		.mapboxgl-popup {
+			max-width: 200px;
+		}
+
+		.mapboxgl-popup-content {
+			text-align: center;
+			font-family: 'Open Sans', sans-serif;
+		}
+		
+		.marker {
+			display: block;
+			border: none;
+			border-radius: 20%;
+			cursor: pointer;
+			padding: 0;
+		}
+		
+		.video {
+			margin:20pt;
+			width:160pt;
+			height:100pt;
+		}
+		
+		.camera-panel {
+			border-radius: 5%;
+			background-color:#eeeeee;
+			width:200pt;
+			font-size:8pt;
+			overflow-y: scroll;
+		}
+		
+		.alert-box {
+			border-radius: 5%;
+			width:200pt;
+			font-size:8pt;
+		}
+	
+    </style>
+</head>
+<body>
+  <!-- Content -->
+	
+	<div class='col12 pad4 clearfix fill-grey contain'>
+      <div class='col4 pin-left pad2 fill-green dark'>
+	    <div style="margin-left:30pt">
+			<h4>Side Menu</h4>
+	 
+			<button class="btn btn-primary" onclick="addStreamVideo()">Add Stream</button>
+			<button class="btn btn-primary" onclick="addAlert('haha')">Add Alert</button>
+		</div>
+		<div id="main-video-panel"/>	
+	  </div>
+    </div>
+	
+	
+	<div id="map"></div>
+	
+
+<script>
+
+mapboxgl.accessToken = 'pk.eyJ1Ijoia3NlcmljcHJvIiwiYSI6ImNqNmZ1aDB0djAya3Iyd3AyZjBpaW5iMngifQ.APKqMGsuBUNaRyCNY3YxPw';
+var video_ct = 0;
+var alert_ct = 0;
+var geojson = {
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {
+                "message": "This is Eric See",
+                "iconSize": [60, 45]
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    103.7389752, 1.3115408
+                ]
+            }
+        }
+    ]
+};
+
+
+function addStreamVideo()
+{
+	video_ct++;
+	var panel_name = "camera-panel-"+video_ct;
+	var video_canvas_name = "video-canvas-"+video_ct;
+	console.log("Adding Stream Video "+panel_name);
+	
+	var mpanel = document.getElementById('main-video-panel');
+	
+	var panel = document.createElement('div');
+	panel.id = panel_name;
+	panel.className = "camera-panel";
+	
+	var iDiv = document.createElement('div');
+	var t = '<a href="javascript:closeStreamVideo('+video_ct+')" id="close" style="margin-left:20pt;" title="close">x</a>';
+	iDiv.setAttribute("align", "right");
+	iDiv.setAttribute("style", "margin-right:15pt");
+	iDiv.innerHTML+=t;
+	panel.appendChild(iDiv);
+	mpanel.appendChild(panel);
+	
+	t ='<canvas class="video" id="'+video_canvas_name+'"></canvas>';
+	panel.innerHTML+=t;
+	var canvas = document.getElementById(video_canvas_name);
+	var url = 'ws://'+document.location.hostname+':8082/';
+	var player = new JSMpeg.Player(url, {canvas: canvas});
+}
+
+function closeStreamVideo(id)
+{
+	console.log("Closing Stream Video "+id);
+	var mpanel = document.getElementById('main-video-panel');
+	var panel = document.getElementById("camera-panel-"+id);
+	mpanel.removeChild(panel);
+}
+
+function addAlert(msg)
+{
+	alert_ct++;
+	var panel_name = "alert-panel-"+alert_ct;
+	console.log("Adding alert "+name);
+	var mpanel = document.getElementById('main-video-panel');
+	
+	var panel = document.createElement('div');
+	panel.id = panel_name;
+	panel.className = "alert alert-danger alert-box";
+	
+	var iDiv = document.createElement('div');
+	var t = '<a href="javascript:closeAlert('+alert_ct+')" id="close" style="margin-left:20pt;" title="close">x</a>';
+	iDiv.innerHTML+=t;
+	iDiv.setAttribute("align", "right");
+	panel.appendChild(iDiv);
+	mpanel.appendChild(panel);
+	
+	var t = '<strong>'+msg+'</strong>';
+	panel.innerHTML+=t;
+}
+
+function closeAlert(id)
+{
+	console.log("Closing Alert "+id);
+	var mpanel = document.getElementById('main-video-panel');
+	var panel = document.getElementById("alert-panel-"+id);
+	mpanel.removeChild(panel);
+}
+
+function displayPopup(coordinates, message)
+{
+	addStreamVideo();
+	var popup = new mapboxgl.Popup({closeOnClick: false})
+		.setLngLat(coordinates)
+		.setHTML(message)
+		.addTo(map);		
+}
+
+function drawMarkers()
+{
+	console.log("draw Markers");
+	// add markers to map
+	geojson.features.forEach(function(marker) {
+		// create a DOM element for the marker
+		var el = document.createElement('div');
+		el.className = 'marker';
+		el.style.backgroundImage = "url(video_thumb.png)";
+		//el.style.backgroundImage = 'url(https://placekitten.com/g/' + marker.properties.iconSize.join('/') + '/)';
+		el.style.width = marker.properties.iconSize[0] + 'px';
+		el.style.height = marker.properties.iconSize[1] + 'px';
+
+		el.addEventListener('click', function() {
+			//window.alert(marker.properties.message);
+			displayPopup(marker.geometry.coordinates, marker.properties.message);
+		});
+
+		// add marker to map
+		new mapboxgl.Marker(el)
+			.setLngLat(marker.geometry.coordinates)
+			.addTo(map);
+	});
+}
+
+function drawImage()
+{
+	map.loadImage('video.png', function(error, image) {
+        if (error) throw error;
+        map.addImage('cat', image);
+        map.addLayer({
+            "id": "points",
+            "type": "symbol",
+            "source": {
+                "type": "geojson",
+                "data": {
+                    "type": "FeatureCollection",
+                    "features": [{
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [103.7389752, 1.3115408]
+                        }
+                    }]
+                }
+            },
+            "layout": {
+                "icon-image": "cat",
+                "icon-size": 0.25
+            }
+        });
+    });
+}
+
+
+var map = new mapboxgl.Map({
+  container: 'map',
+  style: 'mapbox://styles/mapbox/satellite-v9',
+  hash: false,
+  //style: 'mapbox://styles/mapbox/streets-v10',
+  center: [103.7389752, 1.3115408], // starting position [lng, lat]
+  zoom: 12, // starting zoom
+  pitch: 45,
+  bearing: -17.6
+});
+
+//Init
+map.on('load', function() {
+	drawMarkers();
+});
+
+</script>
+
+</body>
+</html>
